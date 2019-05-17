@@ -69,5 +69,13 @@ class BMS(self):
 			firstCellNumber = int(r[2],16)
 			sizeOfGroup = int(r[3],16)
 			individualCellModuleBalancingRate = int(r[4],16)*100/255
+			for x in range(sizeOfGroup):
+				response = self.ser.readline()
+				assert crc8(response[:2]) == int(response[-2:]) # crc check
+				r = response.split(',')
+				assert r[0] == "BB2"
+			return [cellStringNumber,firstCellNumber,sizeOfGroup,individualCellModuleBalancingRate]	
+				
+				
 greenhouseBMS = BMS("COM1", 57600)		
 print(greenhouseBMS.VR1())

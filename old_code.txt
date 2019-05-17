@@ -1,0 +1,47 @@
+notes:
+
+#here's the crc8 algorithm stuff.
+
+#test1
+hash = crc8.crc8()
+hash.update(b'123')
+assert hash.hexdigest() == 'c0'
+assert hash.digest() == b'\xc0'
+
+#test2
+sentence = b"VR1,?,"
+#we're using the Dallas crc-8 algorithm for 1-wire apps.
+#it's represented by x^8 + x^5 + x^4 + x^0
+crc_poly = 0x31
+crc_init = 0x00
+
+def crc8_value(data):
+	bytes = data
+	crc = crc_init
+	for byte in bytes:
+		bit_counter = 8
+		while bit_counter >= 0:
+			feedback_bit = (crc ^ byte) & 0x01
+			if feedback_bit == 0x01:
+				crc = crc ^ crc_poly
+			crc = (crc >> 1) & 0x7F
+			if feedback_bit == 0x01:
+				crc = crc | 0x80
+			bit_counter -= 1
+	return crc
+
+print(sentence)
+print("library: ", crc8.crc8(sentence).hexdigest())
+print("mine: ", hex(crc8_value(sentence)))
+
+
+sentence1 = b"ST1,00,00,0000,000128E3,07,0000,00,00040802,"
+print(sentence1)
+hash = crc8.crc8(sentence1)
+print("Library: ", hash.hexdigest())
+print("Mine: ", hex(crc8_value(sentence1)))
+print("Dallas: ", crc8_d(sentence1))
+
+
+
+

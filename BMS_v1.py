@@ -2,9 +2,191 @@
 import serial
 import crc8_dallas as crc8
 
-
+class BMSstatistic(self):
+	"""
+		used in the sentence SS1
+	"""
+	unit = 'N/A'
+	def __init__(self,statisticIdentifier,statisticValue,statisticValueAdditionalInfo,timestamp):
+		self.statisticIdentifier = statisticIdentifier
+		self.statisticValue = statisticValue
+		self.statisticValueAdditionalInfo = statisticValueAdditionalInfo
+		self.timestamp = timestamp + 946684800
+		s1 = statisticIdentifier
+		if s1 == 0:	self.totalDischarge()
+		if s1 == 1: self.totalCharge()
+		if s1 == 2: self.totalDischargeEnergy()
+		if s1 == 3: self.totalChargeEnergy()
+		if s1 == 4: self.totalDischargeTime()
+		if s1 == 5: self.totalChargeTime()
+		if s1 == 6: self.totalDistance()
+		if s1 == 7: self.masterClearCount()
+		if s1 == 8: self.maxDischargeCurrent()
+		if s1 == 9: self.maxChargeCurrent()
+		if s1 == 10: self.minCellVoltage()
+		if s1 == 11: self.maxCellVoltage()
+		if s1 == 12: self.maxCellVoltageDifference()
+		if s1 == 13: self.minPackVoltage()
+		if s1 == 14: self.maxPackVoltage()
+		if s1 == 15: self.minCellModuleTemperature()
+		if s1 == 16: self.maxCellModuleTemperature()
+		if s1 == 17: self.maxCellModuleTemperatureDifference()
+		if s1 == 18: self.BMS_starts_count()
+		if s1 == 19: self.undervoltage_protection_count()
+		if s1 == 20: self.overvoltage_protection_count()
+		if s1 == 21: self.discharge_overcurrent_protection_count()
+		if s1 == 22: self.charge_overcurrent_protection_count()
+		if s1 == 23: self.cell_module_overheat_protection_count()
+		if s1 == 24: self.leakage_protection_count()
+		if s1 == 25: self.no_cell_comm_protection_count()
+		if s1 == 26: self.low_voltage_power_reduction_count()
+		if s1 == 27: self.high_current_power_reduction_count()
+		if s1 == 28: self.high_cell_module_temperature_power_reduction_count()
+		if s1 == 29: self.charger_connect_count()
+		if s1 == 30: self.charger_disconnect_count()
+		if s1 == 31: self.preheat_stage_count()
+		if s1 == 32: self.precharge_stage_count()
+		if s1 == 33: self.main_charge_stage_count()
+		if s1 == 34: self.balancing_stage_count()
+		if s1 == 35: self.charging_finished_count()
+		if s1 == 36: self.charging_error_occurred_count()
+		if s1 == 37: self.charging_retry_count()
+		if s1 == 38: self.trips_count()
+		if s1 == 39: self.charge_restarts_count()
+		if s1 == 45: self.cell_overheat_protection_count()
+		if s1 == 46: self.high_cell_module_temperature_power_reduction_count()
+		if s1 == 47: self.min_cell_temperature()
+		if s1 == 48: self.max_cell_temperature()
+		if s1 == 49: self.max_cell_temperature_difference()
+	def totalDischarge(self):
+		self.unit = 'Ah'
+	def totalCharge(self):
+		self.unit = 'Ah'
+	def totalDischargeEnergy(self):
+		self.unit = 'Wh'
+	def totalChargeEnergy(self):
+		self.unit = 'Wh'
+	def totalDischargeTime(self):
+		self.unit = 's'
+	def totalChargeTime(self):
+		self.unit = 's'
+	def totalDistance(self):
+		self.unit = 'pulses'
+	def masterClearCount(self):
+		self.name = 'count'
+	def maxDischargeCurrent(self):
+		self.unit = 'A'
+		self.statisticValue *= 0.1
+	def maxChargeCurrent(self):
+		self.unit = 'A'
+		self.statisticValue *= 0.1
+	def minCellVoltage(self):
+		self.unit = 'V'
+		self.statisticValue = (self.statisticValue + 200) * 0.1
+		self.additional_info_meta = 'Cell ID'
+	def maxCellVoltage(self)
+		self.unit = 'V'
+		self.statisticValue = (self.statisticValue + 200) * 0.1
+		self.cell_ID = self.statisticValueAdditionalInfo
+	def maxCellVoltageDifference(self):
+		self.unit = 'V'
+		self.statisticValue = (self.statisticValue) * 0.1
+		bytemap = hex(self.statisticValueAdditionalInfo)[2:].upper()
+		
+		self.min_cell_voltage = (int(bytemap[0],16) + 200) * 0.1
+		self.max_cell_voltage = (int(bytemap[1],16) ) * 0.1
+		self.cell_ID = int(bytemap[2:3],16)
+		"""
+		LSB - Min cell voltage at the time
+		max cell voltage difference was registerd.
+		"""
+	def minPackVoltage(self):
+		self.unit = 'V'
+		self.statisticValue *= 0.1
+	def maxPackVoltage(self):
+		self.unit = 'V'
+		self.statisticValue *= 0.1
+	def minCellModuleTemperature(self):
+		self.unit = 'C'
+		self.statisticValue = self.statisticValue - 100
+		self.cell_ID = self.statisticValueAdditionalInfo
+	def maxCellModuleTemperature(self):
+		self.unit = 'C'
+		self.statisticValue = self.statisticValue - 100
+		self.cell_ID = self.statisticValueAdditionalInfo
+	def maxCellModuleTemperatureDifference(self):
+		self.unit = 'C'
+		bytemap = hex(self.statisticValueAdditionalInfo)[2:].upper()
+		
+		self.min_cell_voltage = (int(bytemap[0],16) -100)
+		self.max_cell_voltage = (int(bytemap[1],16) -100)
+		self.cell_ID = int(bytemap[2:3],16)
+	def BMS_starts_count(self):
+		self.unit = 'N/A'
+	def undervoltage_protection_count(self):
+		self.unit = 'N/A'
+	def overvoltage_protection_count(self):
+		self.unit = 'N/A'
+	def discharge_overcurrent_protection_count(self):
+		self.unit = 'N/A'
+	def charge_overcurrent_protection_count(self):
+		self.unit = 'N/A'
+	def cell_module_overheat_protection_count(self):
+		self.unit = 'N/A'
+	def leakage_protection_count(self):
+		self.unit = 'N/A'
+	def no_cell_comm_protection_count(self):
+		self.unit = 'N/A'
+	def low_voltage_power_reduction_count(self):
+		self.unit = 'N/A'
+	def high_current_power_reduction_count(self):
+		self.unit = 'N/A'
+	def high_cell_module_temperature_power_reduction_count(self):
+		self.unit = 'N/A'
+	def charger_connect_count(self):
+		self.unit = 'N/A'
+	def charger_disconnect_count(self):
+		self.unit = 'N/A'
+	def preheat_stage_count(self):
+		self.unit = 'N/A'
+	def precharge_stage_count(self):
+		self.unit = 'N/A'
+	def main_charge_stage_count(self):
+		self.unit = 'N/A'
+	def balancing_stage_count(self):
+		self.unit = 'N/A'
+	def charging_finished_count(self):
+		self.unit = 'N/A'
+	def charging_error_occurred_count(self):
+		self.unit = 'N/A'
+	def charging_retry_count(self):
+		self.unit = 'N/A'
+	def trips_count(self):
+		self.unit = 'N/A'
+	def charge_restarts_count(self):
+		self.unit = 'N/A'
+	def cell_overheat_protection_count(self):
+		self.unit = 'N/A'
+	def high_cell_temperature_power_reduction_count(self):
+		self.unit = 'N/A'
+	def min_cell_temperature(self):
+		self.unit = 'C'
+		self.statistic -= 100
+		self.cell_ID = self.statisticValueAdditionalInfo
+	def max_cell_temperature(self):
+		self.unit = 'C'
+		self.statistic -= 100
+		self.cell_ID = self.statisticValueAdditionalInfo
+	def max_cell_temperature_difference(self):
+		self.unit = 'C'
+		bytemap = hex(self.statisticValueAdditionalInfo)[2:].upper()
+		self.min_cell_temperature = int(bytemap[0],16) - 100
+		self.max_cell_temperature = int(bytemap[1],16) - 100
+		self.cell_ID = int(bytemap[2:3],16)
+		
 class BMS(self):
 	#variables:
+	y2kInEpoch = 946684800
 	#connection (ser)
 	def __init__(self, PORT, BAUDRATE):
 		self.ser = serial.Serial(port=PORT, baudrate=BAUDRATE,bytesize=8,parity='N',xonxoff=0)
@@ -441,10 +623,9 @@ class BMS(self):
 								44: 'Warning: High cell temperature - reducing power'
 							 }
 		y2kTimestamp = int(r[4],16) #coded in seconds since January 1, 2000 time 00:00 (Y2K)
-		y2kInEpoch = 946684800
 		#Unix epoch is January 1, 1970 00:00
 		#add Y2K in epoch time 
-		epochTimestamp = y2kTimestamp + y2kInEpoch 
+		epochTimestamp = y2kTimestamp + self.y2kInEpoch 
 		
 		#convert epoch time stamp into a real class from the time library.
 		import time
@@ -547,8 +728,78 @@ class BMS(self):
 		number = crc8(sentence)
 		sentence += number
 		self.ser.write(sentence)
-	
+		response = self.ser.readline()
+		assert crc8(response[:2]) == int(response[-2:]) # crc check
+		r = response.split(',')
+		assert r[0] == 'RS2'
+		records = []
+		import time
+		y2kInEpoch = time.gmtime(
+		for i in range(1,10,2):
+			timestamp =  int(r[i],16)+ self.y2kInEpoch
+			timeStruct = time.gmtime(timestamp)
+			resetSourceFlags = int(r[i+1],16)
+			x = resetSourceFlags
+			POWER_ON_RESET = True if x & 0x1 else False
+			EXTERNAL_RESET = True if x & 0x2 else False
+			BROWN_OUT_RESET = True if x & 0x4 else False
+			WATCHDOG_RESET = True if x & 0x8 else False
+			JTAG_REST = True if x & 0x10 else False
+			STACK_OVERFLOW_RESET = True if x & 0x20 else False
+			USER_CAUSED_RESET = True if x & 0x40 else False
+			records.append(timestamp, [POWER_ON_RESET,EXTERNAL_RESET,BROWN_OUT_RESET,WATCHDOG_RESET,JTAG_REST,STACK_OVERFLOW_RESET,USER_CAUSED_RESET])
+		return records
+	def SC1(self, percentage):
+		"""
+		set the current state of the charge of the battery in %.
+		send in an integer from 0 to 100.
+		this method will convert to hexadecimal format first.
+		returns False if not successful or invalid percentage is passed.
+		returns True if successful.
+		"""
+		if not isinstance(percentage, int):
+			return False
+		elif (percentage < 0 or percentage > 100):
+			return False
+		else:
+			sentence = "SC1," + hex(percentage)[2:].upper() + ","
+			number = crc8(sentence)
+			sentence += number
+			self.ser.write(sentence)
+			return True
+	def SS1(self, request, statisticIdentifier=0):
+		"""
+		This method is used to retrive the statistics from the Emus BMS unit.
+		request parameter:
 		
+		'?': request all statistics
+		'N': request a numbered statistic. Pass in a number.
+		'c': all unprotected statistics
+		"""
+		if request == '?':
+			pass
+		if request == 'N':
+			if not isinstance(number, int):
+				return -1
+			sentence = "SS1," + hex(statisticIdentifier)[2:].upper() + ","
+			number = crc8(sentence)
+			sentence += number
+			self.ser.write(sentence)
+			response = self.ser.readline()
+			assert crc8(response[:2]) == int(response[-2:]) # crc check
+			r = response.split(',')
+			assert r[0] == 'SS1'
+			assert int(r[1],16) == statisticIdentifier
+			statisticValue = int(r[2], 16)
+			statisticValueAdditionalInfo = int(r[3],16)
+			timeStamp = int(r[4],16)
+			single_statistic = BMSstatistic(statisticValue,statisticValueAdditionalInfo,timeStamp)
+			return single_statistic
+			
+	def	ST1(self):
+		"""
+			BMS Status sentence
+		"""
 		
 greenhouseBMS = BMS("COM1", 57600)		
 print(greenhouseBMS.VR1())

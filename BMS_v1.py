@@ -453,12 +453,39 @@ class BMS(self):
 		assert r[0] == "CF2"
 		assert r[1] == str(parameterID.hex())
 		return int(r[2],16)
+	def CG1(self):
+		sentence = "CG1,?,"
+		number = crc8(sentence)
+		sentence += number
+		self.ser.write(sentence)
+		
+		response = self.ser.readline()
+		assert crc8(response[:2]) == int(response[-2:]) # crc check
+		r = response.split(',')
+		assert r[0] == "CG1"
+		CAN_current_dict = {
+			0 :" Not configured;",
+			1 : " OK;",
+			2 : " Error ;",
+			3 : " No Response."
+		}
+		CAN_current_sensor_status = CAN_current_dict[int(r[1],16)]
+		
+		CAN_cell_groups = []
+		
+		for i in range(3,67,2):
+			number_of_cells = int(r[i],16)
+			status = CAN_current_dict(int(r[i+1],16))
+			
+			CAN_cell_groups.append([number_of_cells,status])
+		return CAN_current_sensor_status,CAN_cell_groups
+
 	def CN1(self)	
 		"""
 		reports the CAN messages received on CAN bus is "Send to RS232/USB function is enabled.
 		
 		"""
-		sentence = "CN1,"
+		sentence = "CN1,?,"
 		number = crc8(sentence)
 		sentence += number
 		self.ser.write(sentence)
@@ -469,15 +496,15 @@ class BMS(self):
 		assert r[0] == "CN1"
 		CANIdentifier = int(r[1],16)
 		identifierExtensionFlag = True if r[2] == '1' else False
-		remoteTransmissinoRequestFlag = True if r[3] == '1' else False
+		remoteTransmissionRequestFlag = True if r[3] == '1' else False
 		dataLength = int(r[4],10)
 		data = [r[5][i:i+2] for i in range(0,len(r[5]),2)]
-		return [CANIdentifier,identifierExtensionFlag,remoteTransmissinoRequestFlag,dataLength,data]
+		return [CANIdentifier,identifierExtensionFlag,remoteTransmissionRequestFlag,dataLength,data]
 	def CN2(self):
 		"""
 		reports the CAN messages sent on CAN bus if "Send to RS232/USB function is enabled.
 		"""
-		sentence = "CN2,"
+		sentence = "CN2,?,"
 		number = crc8(sentence)
 		sentence += number
 		self.ser.write(sentence)
@@ -506,8 +533,9 @@ class BMS(self):
 		assert crc8(response[:2]) == int(response[-2:]) # crc check
 		r = response.split(',')
 		assert r[0] == "CS1"
+		
 		numberOfConnectedChargers = int(r[1],16)
-		CANChargerStatus = int(r[2],16)
+		CANChargerStatus = int(r[2],16) #consult the CAN charger manual for the meaning.
 		setVoltage = int(r[3],16)*0.1
 		setCurrent = int(r[4],16)*0.1
 		actualVoltage = int(r[5],16)*0.1
@@ -535,7 +563,7 @@ class BMS(self):
 		This is being programmed for a greenhouse, so this will not
 		be programmed for.
 		"""
-		return []
+		return
 	def FD1(self):
 		"""
 			This function resets the unit to factory defaults. Use at your own risk.
@@ -544,7 +572,7 @@ class BMS(self):
 		number = crc8(sentence)
 		sentence += number
 		self.ser.write(sentence)
-		return
+		return True
 	def IN1(self):
 		"""
 			Input Pins status.
@@ -774,10 +802,16 @@ class BMS(self):
 		
 		'?': request all statistics
 		'N': request a numbered statistic. Pass in a number.
-		'c': all unprotected statistics
+		'c': clear all unprotected statistics.
 		"""
 		if request == '?':
-			pass
+			sentence = "SS1,?,"
+			number = crc8(sentence)
+			sentence += number
+			self.ser.write(sentence)
+			
+			response = self.ser.readlines(500)
+			
 		if request == 'N':
 			if not isinstance(number, int):
 				return -1
@@ -785,6 +819,7 @@ class BMS(self):
 			number = crc8(sentence)
 			sentence += number
 			self.ser.write(sentence)
+			
 			response = self.ser.readline()
 			assert crc8(response[:2]) == int(response[-2:]) # crc check
 			r = response.split(',')
@@ -795,11 +830,96 @@ class BMS(self):
 			timeStamp = int(r[4],16)
 			single_statistic = BMSstatistic(statisticValue,statisticValueAdditionalInfo,timeStamp)
 			return single_statistic
-			
+		if request == 'c':
+			sentence = "SS1,c,"
+			number = crc8(sentence)
+			sentence += number
+			self.ser.write(sentence)
 	def	ST1(self):
 		"""
 			BMS Status sentence
 		"""
+		sentence = "ST1,?,"
+		number = crc8(sentence)
+		sentence += number
+		self.ser.write(sentence)
+	
+		response = self.ser.readline()
+		assert crc8(response[:2]) == int(response[-2:]) # crc check
+		r = response.split(',')
+		assert r[0] == 'ST1'
+		chargingStageDict = {
+			0 : "Charger Disconnected",
+			1 : "Pre-Heating Stage",
+			2 : "Pre-Charging Stage",
+			3 : "Main Charging Stage",
+			4 : "Balancing Stage",
+			5 : "Charging Finished",
+			6 : "Charging Error"
+		}
+		chargingErrorDict = { 
+			0 : "No error",
+			1 : " No cell communication at the start of charging or communication lost during Pre-charging (using CAN charger), cannot charge",
+			2 : " No cell communication (using non-CAN charger), cannot charge",
+			3 : " Maximum charging stage duration expired;",
+			4 : " Cell communication lost during Main Charging or Balancing stage (using CAN charger), cannot continue charging",
+			5 : " Cannot set cell module balancing threshold; ",
+			6 : " Cell or cell module temperature too high;",
+			7 : " Cell communication lost during Pre-heating stage (using CAN charger);",
+			8 : " Number of cells mismatch;",
+			9 : " Cell over-voltage;",
+			10 : " Cell protection event occurred."
+		}
+
+		charging_stage = chargingStageDict[int(r[1],16)]
+		last_charging_error = chargingErrorDict[int(r[2],16]
+		last_charging_error_parameter = int(r[3],16)
+		stage_duration = int(r[4],16)
 		
+		status_bitfield = int(r[5],16)
+		cell_voltages_v,cell_module_temperature_v,cell_balancing_rates_v,number_of_live_cells_v,cell_temperatures_v = (0x1) & status_bitfield, (0x1 << 1) & status_bitfield,(0x1 << 2) & status_bitfield,(0x1 << 3) & status_bitfield,(0x1 << 4) & status_bitfield,(0x1 << 5) & status_bitfield
+	
+		
+		protection_bitfield = int(r[6],16)
+		undervoltage,overvoltage,discharge_overcurrent,charge_overcurrent,cell_module_overheat,leakage,no_cell_comm,cell_overheat = (0x1) & protection_bitfield, (0x1 << 1) & protection_bitfield,(0x1 << 2) & protection_bitfield,(0x1 << 3) & protection_bitfield,(0x1 << 4) & protection_bitfield,(0x1 << 5) & protection_bitfield,(0x1 << 6) & protection_bitfield,(0x1 << 11) & protection_bitfield
+		
+		power_bitfield = int(r[7],16)
+		low_voltage,high_current,high_cell_module, high_cell_temperature = ((0x1) & power_bitfield,(0x1 << 1) & power_bitfield,(0x1 << 2) & power_bitfield,(0x1 << 5) & power_bitfield
+		
+		pin_bitfield = int(r[8],16)
+		no_function,speed_sensor,fast_charge_switch,ign_key,charger_mains_AC_sense, heater_enable,sound_buzzer,battery_low,charging_indication,charger_enable_output,state_of_charge,battery_contactor,battery_fan,current_sensor,leakage_sensor,power_reduction,charging_interlock, analog_charger_control, ZVU_boost_charge,ZVU_slow_charge,ZVU_buffer_mode,BMS_failure,equalization_enable,DCDC_control,ESM_rectifier_current_limit,contactor_precharge = (0x1) & pin_bitfield,(0x1 << 1) & pin_bitfield,(0x1 << 2) & pin_bitfield,(0x1 << 3) & pin_bitfield,(0x1 << 4) &	pin_bitfield,(0x1 << 5) & pin_bitfield,(0x1 << 6) & pin_bitfield,(0x1 << 7) & pin_bitfield,(0x1 << 8) & pin_bitfield,(0x1 << 9) & pin_bitfield,(0x1 << 10) & pin_bitfield,(0x1 << 11) & pin_bitfield,(0x1 << 12) & pin_bitfield,(0x1 << 13) & pin_bitfield,(0x1 << 14) & pin_bitfield,(0x1 << 15) & pin_bitfield,(0x1 << 16) & pin_bitfield,(0x1 << 17) & pin_bitfield,(0x1 << 18) & pin_bitfield,(0x1 << 19) & pin_bitfield,(0x1 << 20) & pin_bitfield,(0x1 << 21) & pin_bitfield,(0x1 << 22) & pin_bitfield,(0x1 << 23) & pin_bitfield,(0x1 << 24) & pin_bitfield,(0x1 << 25) & pin_bitfield,(0x1 << 26) & pin_bitfield
+		return [charging_stage, last_charging_error, last_charging_error_parameter,stage_duration
+		
+		[cell_voltages_v,cell_module_temperature_v,cell_balancing_rates_v,number_of_live_cells_v,cell_temperatures_v ],
+		[undervoltage,overvoltage,discharge_overcurrent,charge_overcurrent,cell_module_overheat,leakage,no_cell_comm,cell_overheat],
+		[no_function,speed_sensor,fast_charge_switch,ign_key,charger_mains_AC_sense, heater_enable,sound_buzzer,battery_low,charging_indication,charger_enable_output,state_of_charge,battery_contactor,battery_fan,current_sensor,leakage_sensor,power_reduction,charging_interlock, analog_charger_control, ZVU_boost_charge,ZVU_slow_charge,ZVU_buffer_mode,BMS_failure,equalization_enable,DCDC_control,ESM_rectifier_current_limit,contactor_precharge ]
+		]
+	def TD1(self):
+		"""
+		Time and date according to the BMS unit.
+		"""
+		sentence = "TD1,?,"
+		number = crc8(sentence)
+		sentence += number
+		self.ser.write(sentence)
+	
+		response = self.ser.readline()
+		assert crc8(response[:2]) == int(response[-2:]) # crc check
+		r = response.split(',')
+		assert r[0] == 'TD1'
+		year = int(r[1],10)
+		month = int(r[2],10)
+		day = int(r[3],10)
+		hour = int(r[4],10)
+		minute = int(r[5],10)
+		second = int(r[6],10)
+		uptime = int(r[7],16)
+		return [year, month, day, hour, minute, second, uptime]
+	def TC2(self):
+		"""
+			Used to calibrate cell temperature by a PC, not a microcontroller. Do not use!
+		"""
+		return -1
+
 greenhouseBMS = BMS("COM1", 57600)		
 print(greenhouseBMS.VR1())

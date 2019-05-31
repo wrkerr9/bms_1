@@ -2,7 +2,7 @@
 import serial
 import crc8_dallas as crc8
 
-class BMSstatistic(self):
+class BMSstatistic:
 	"""
 		used in the sentence SS1
 	"""
@@ -84,7 +84,7 @@ class BMSstatistic(self):
 		self.unit = 'V'
 		self.statisticValue = (self.statisticValue + 200) * 0.1
 		self.additional_info_meta = 'Cell ID'
-	def maxCellVoltage(self)
+	def maxCellVoltage(self):
 		self.unit = 'V'
 		self.statisticValue = (self.statisticValue + 200) * 0.1
 		self.cell_ID = self.statisticValueAdditionalInfo
@@ -184,7 +184,7 @@ class BMSstatistic(self):
 		self.max_cell_temperature = int(bytemap[1],16) - 100
 		self.cell_ID = int(bytemap[2:3],16)
 		
-class BMS(self):
+class BMS:
 	#variables:
 	y2kInEpoch = 946684800
 	#connection (ser)
@@ -317,7 +317,7 @@ class BMS(self):
 			firstCellNumber = int(r[2],16)
 			limit = int(r[3],16)
 			sizeOfGroup = limit
-			individualCellModuleTemperatures = int(r[4,16)-100)
+			individualCellModuleTemperatures = int(r[4,16]-100)
 			cellGroups.append([cellStringNumber,firstCellNumber,sizeOfGroup,individualCellModuleTemperatures])
 			for i in range(limit-1):
 				response = self.ser.readline()
@@ -328,7 +328,7 @@ class BMS(self):
 				firstCellNumber = int(r[2],16)
 				limit = int(r[3],16)
 				sizeOfGroup = limit
-				individualCellModuleTemperatures = int(r[4,16)-100)
+				individualCellModuleTemperatures = int(r[4,16]-100)
 				cellGroups.append([cellStringNumber,firstCellNumber,sizeOfGroup,individualCellModuleTemperatures])
 			return cellGroups
 	def BT3(self):
@@ -369,7 +369,7 @@ class BMS(self):
 			firstCellNumber = int(r[2],16)
 			limit = int(r[3],16)
 			sizeOfGroup = limit
-			individualCellTemperatures = int(r[4,16)-100)
+			individualCellTemperatures = int(r[4,16]-100)
 			cellGroups.append([cellStringNumber,firstCellNumber,sizeOfGroup,individualCellTemperatures])
 			for i in range(limit-1):
 				response = self.ser.readline()
@@ -380,7 +380,7 @@ class BMS(self):
 				firstCellNumber = int(r[2],16)
 				limit = int(r[3],16)
 				sizeOfGroup = limit
-				individualCellTemperatures = int(r[4,16)-100)
+				individualCellTemperatures = int(r[4,16]-100)
 				cellGroups.append([cellStringNumber,firstCellNumber,sizeOfGroup,individualCellTemperatures])
 			return cellGroups
 	def BV1(self):
@@ -404,25 +404,28 @@ class BMS(self):
 			totalVoltage = (int(r[2],16) ) * 0.01
 			return [numberOfCells,minCellVoltage,maxCellVoltage,averageCellVoltage,totalVoltage]
 	def BV2(self):
+		#construct the sentence, then send it.
 		sentence = "BV2,?,"
 		number = crc8(sentence)
 		sentence += number
 		self.ser.write(sentence)
 		
+		#get the response, and check if it's valid.
 		response = self.ser.readline()
 		assert crc8(response[:2]) == int(response[-2:]) # crc check
 		r = response.split(',')
 		assert r[0] == "BV2"
 		
+		#check for empty string. if it's empty, return an empty array.
 		if r[1] == '':
 			return []
 		else:
 			cellGroups = []
 			cellStringNumber = int(r[1],16)
 			firstCellNumber = int(r[2],16)
-			limit = int(r[3],16)
+			limit = int(r[3],16) #we read this many lines.
 			sizeOfGroup = limit
-			individualCellVoltages = (int(r[4,16)+200)*0.01
+			individualCellVoltages = int(r[4,16]+200)*0.01
 			cellGroups.append([cellStringNumber,firstCellNumber,sizeOfGroup,individualCellVoltages])
 			for i in range(limit-1):
 				response = self.ser.readline()
@@ -433,7 +436,7 @@ class BMS(self):
 				firstCellNumber = int(r[2],16)
 				limit = int(r[3],16)
 				sizeOfGroup = limit
-				individualCellVoltages = (int(r[4,16)+200)*0.01
+				individualCellVoltages = int(r[4,16]+200)*0.01
 				cellGroups.append([cellStringNumber,firstCellNumber,sizeOfGroup,individualCellVoltages])
 			return cellGroups
 	def CF2(self, parameterID):
@@ -480,16 +483,18 @@ class BMS(self):
 			CAN_cell_groups.append([number_of_cells,status])
 		return CAN_current_sensor_status,CAN_cell_groups
 
-	def CN1(self)	
+	def CN1(self):	
 		"""
 		reports the CAN messages received on CAN bus is "Send to RS232/USB function is enabled.
 		
 		"""
+		#construct the sentence, and send it.
 		sentence = "CN1,?,"
 		number = crc8(sentence)
 		sentence += number
 		self.ser.write(sentence)
 		
+		#get the response. should only be 1 line.
 		response = self.ser.readline()
 		assert crc8(response[:2]) == int(response[-2:]) # crc check
 		r = response.split(',')
@@ -504,11 +509,13 @@ class BMS(self):
 		"""
 		reports the CAN messages sent on CAN bus if "Send to RS232/USB function is enabled.
 		"""
+		#construct the sentence.
 		sentence = "CN2,?,"
 		number = crc8(sentence)
 		sentence += number
 		self.ser.write(sentence)
 		
+		#receive the response.
 		response = self.ser.readline()
 		assert crc8(response[:2]) == int(response[-2:]) # crc check
 		r = response.split(',')
@@ -715,7 +722,7 @@ class BMS(self):
 		sentence = "PW2,"
 		if request == 'C': #clear password
 			sentence += ","
-		elif request = 'S': #set a new password
+		elif request == 'S': #set a new password
 			setence += str(newPassword) + ","
 		number = crc8(sentence)
 		sentence += number
@@ -762,7 +769,6 @@ class BMS(self):
 		assert r[0] == 'RS2'
 		records = []
 		import time
-		y2kInEpoch = time.gmtime(
 		for i in range(1,10,2):
 			timestamp =  int(r[i],16)+ self.y2kInEpoch
 			timeStruct = time.gmtime(timestamp)
@@ -805,32 +811,54 @@ class BMS(self):
 		'c': clear all unprotected statistics.
 		"""
 		if request == '?':
+			#assemble the sentence
 			sentence = "SS1,?,"
 			number = crc8(sentence)
 			sentence += number
 			self.ser.write(sentence)
 			
-			response = self.ser.readlines(500)
-			
+			#read all lines that are sent in response. I don't know how many lines there are.
+			#times out after 500 seconds.
+			#The code will process all the lines, though.
+			#each line contains a line.
+			#validate every line.
+			all_responses = self.ser.readlines(500)
+			data = []
+			for response in all_responses:
+				assert crc8(response[:2]) == int(response[-2:]) # crc check
+				r = response.split(',')
+				assert r[0] == 'SS1'
+				datum = BMSstatistic(int(r[1],16),int(r[2],16),int(r[3],16),int(r[4],16))
+				data.append(datum)
+			return data
 		if request == 'N':
+			#check if it's a number.
 			if not isinstance(number, int):
 				return -1
+			#construct the sentence.
+			#send the data in hex.
 			sentence = "SS1," + hex(statisticIdentifier)[2:].upper() + ","
 			number = crc8(sentence)
 			sentence += number
 			self.ser.write(sentence)
 			
+			#only 1 line of response is sent.
 			response = self.ser.readline()
 			assert crc8(response[:2]) == int(response[-2:]) # crc check
 			r = response.split(',')
 			assert r[0] == 'SS1'
+			#this must be true. We have to be getting the statistic we asked for.
 			assert int(r[1],16) == statisticIdentifier
+			
 			statisticValue = int(r[2], 16)
 			statisticValueAdditionalInfo = int(r[3],16)
 			timeStamp = int(r[4],16)
-			single_statistic = BMSstatistic(statisticValue,statisticValueAdditionalInfo,timeStamp)
+			
+			single_statistic = BMSstatistic(statisticsIdentifier, statisticValue,statisticValueAdditionalInfo,timeStamp)
 			return single_statistic
+			
 		if request == 'c':
+			#assemble the sentence.
 			sentence = "SS1,c,"
 			number = crc8(sentence)
 			sentence += number
@@ -839,6 +867,7 @@ class BMS(self):
 		"""
 			BMS Status sentence
 		"""
+		#construct the sentence, and send it.
 		sentence = "ST1,?,"
 		number = crc8(sentence)
 		sentence += number
@@ -848,6 +877,7 @@ class BMS(self):
 		assert crc8(response[:2]) == int(response[-2:]) # crc check
 		r = response.split(',')
 		assert r[0] == 'ST1'
+		#let's use a dictionary for easy reading.
 		chargingStageDict = {
 			0 : "Charger Disconnected",
 			1 : "Pre-Heating Stage",
@@ -870,11 +900,11 @@ class BMS(self):
 			9 : " Cell over-voltage;",
 			10 : " Cell protection event occurred."
 		}
-
+		#find all the errors using the dictionaries above.
 		charging_stage = chargingStageDict[int(r[1],16)]
-		last_charging_error = chargingErrorDict[int(r[2],16]
+		last_charging_error = chargingErrorDict[int(r[2],16)]
 		last_charging_error_parameter = int(r[3],16)
-		stage_duration = int(r[4],16)
+		stage_duration = int(r[4],16) # in seconds.
 		
 		status_bitfield = int(r[5],16)
 		cell_voltages_v,cell_module_temperature_v,cell_balancing_rates_v,number_of_live_cells_v,cell_temperatures_v = (0x1) & status_bitfield, (0x1 << 1) & status_bitfield,(0x1 << 2) & status_bitfield,(0x1 << 3) & status_bitfield,(0x1 << 4) & status_bitfield,(0x1 << 5) & status_bitfield
@@ -884,7 +914,7 @@ class BMS(self):
 		undervoltage,overvoltage,discharge_overcurrent,charge_overcurrent,cell_module_overheat,leakage,no_cell_comm,cell_overheat = (0x1) & protection_bitfield, (0x1 << 1) & protection_bitfield,(0x1 << 2) & protection_bitfield,(0x1 << 3) & protection_bitfield,(0x1 << 4) & protection_bitfield,(0x1 << 5) & protection_bitfield,(0x1 << 6) & protection_bitfield,(0x1 << 11) & protection_bitfield
 		
 		power_bitfield = int(r[7],16)
-		low_voltage,high_current,high_cell_module, high_cell_temperature = ((0x1) & power_bitfield,(0x1 << 1) & power_bitfield,(0x1 << 2) & power_bitfield,(0x1 << 5) & power_bitfield
+		low_voltage,high_current,high_cell_module, high_cell_temperature = (0x1) & power_bitfield,(0x1 << 1) & power_bitfield,(0x1 << 2) & power_bitfield,(0x1 << 5) & power_bitfield
 		
 		pin_bitfield = int(r[8],16)
 		no_function,speed_sensor,fast_charge_switch,ign_key,charger_mains_AC_sense, heater_enable,sound_buzzer,battery_low,charging_indication,charger_enable_output,state_of_charge,battery_contactor,battery_fan,current_sensor,leakage_sensor,power_reduction,charging_interlock, analog_charger_control, ZVU_boost_charge,ZVU_slow_charge,ZVU_buffer_mode,BMS_failure,equalization_enable,DCDC_control,ESM_rectifier_current_limit,contactor_precharge = (0x1) & pin_bitfield,(0x1 << 1) & pin_bitfield,(0x1 << 2) & pin_bitfield,(0x1 << 3) & pin_bitfield,(0x1 << 4) &	pin_bitfield,(0x1 << 5) & pin_bitfield,(0x1 << 6) & pin_bitfield,(0x1 << 7) & pin_bitfield,(0x1 << 8) & pin_bitfield,(0x1 << 9) & pin_bitfield,(0x1 << 10) & pin_bitfield,(0x1 << 11) & pin_bitfield,(0x1 << 12) & pin_bitfield,(0x1 << 13) & pin_bitfield,(0x1 << 14) & pin_bitfield,(0x1 << 15) & pin_bitfield,(0x1 << 16) & pin_bitfield,(0x1 << 17) & pin_bitfield,(0x1 << 18) & pin_bitfield,(0x1 << 19) & pin_bitfield,(0x1 << 20) & pin_bitfield,(0x1 << 21) & pin_bitfield,(0x1 << 22) & pin_bitfield,(0x1 << 23) & pin_bitfield,(0x1 << 24) & pin_bitfield,(0x1 << 25) & pin_bitfield,(0x1 << 26) & pin_bitfield
@@ -920,6 +950,10 @@ class BMS(self):
 			Used to calibrate cell temperature by a PC, not a microcontroller. Do not use!
 		"""
 		return -1
-
-greenhouseBMS = BMS("COM1", 57600)		
-print(greenhouseBMS.VR1())
+#testing grounds
+if __name__ == "__main__":
+	try:
+		greenhouseBMS = BMS("COM1", 57600)		
+		print(greenhouseBMS.VR1())
+	except:
+		pass
